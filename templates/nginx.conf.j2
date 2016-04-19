@@ -35,6 +35,10 @@ server {
     expires off;
     gzip on;
 
+    {% for option in app.nginx_options|default(wsgi_nginx_options) %}
+        {{option}}
+    {% endfor -%}
+
     location / {
         expires off;
 
@@ -57,9 +61,6 @@ server {
     }
 {% endfor -%}
 
-{% for option in app.nginx_options|default(wsgi_nginx_options) %}
-    {{option}}
-{% endfor -%}
 }
 {%- endmacro %}
 
