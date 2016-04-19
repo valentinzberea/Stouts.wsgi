@@ -48,6 +48,7 @@ wsgi_nginx_ssl_crt:                                   # Path to certificate bund
 wsgi_nginx_ssl_key:                                   # Path to certificate key
 wsgi_nginx_ssl_port: 443
 wsgi_nginx_ssl_redirect: no                           # Redirect to SSL port
+wsgi_nginx_api_locations: []
 wsgi_nginx_static_locations: [/static/, /media/]
 
 # Logging options

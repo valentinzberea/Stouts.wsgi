@@ -15,65 +15,66 @@
 
 {% macro server_init(port, ssl=False) -%}
 server {
-    listen {{port}};
-{% if servernames %}
-    server_name {{servernames}};
-{% endif -%}
+  listen {{port}};
+  {% if servernames %}
+  server_name {{servernames}};
+  {% endif -%}
 
-{% if ssl and wsgi_nginx_ssl_crt and wsgi_nginx_ssl_key -%}
-    ssl on;
-    ssl_protocols   {{wsgi_nginx_ssl_protocols}};
-    ssl_certificate {{wsgi_nginx_ssl_crt}};
-    ssl_certificate_key {{wsgi_nginx_ssl_key}};   
-{% endif %}
+  {% if ssl and wsgi_nginx_ssl_crt and wsgi_nginx_ssl_key -%}
+  ssl on;
+  ssl_protocols   {{wsgi_nginx_ssl_protocols}};
+  ssl_certificate {{wsgi_nginx_ssl_crt}};
+  ssl_certificate_key {{wsgi_nginx_ssl_key}};
+  {% endif %}
 
-    access_log {{log_dir + '/' + app.name + '-nginx-access.log'}};
-    error_log {{log_dir + '/' + app.name + '-nginx-error.log'}};
+  access_log {{log_dir + '/' + app.name + '-nginx-access.log'}};
+  error_log {{log_dir + '/' + app.name + '-nginx-error.log'}};
 
-    charset utf-8;
-    client_max_body_size 15M;
+  charset utf-8;
+  client_max_body_size 15M;
+  expires off;
+  gzip on;
+
+  {% for option in app.nginx_options|default(wsgi_nginx_options) %}
+  {{option}}
+  {% endfor -%}
+
+  location / {
+    access_log off;
+    root {{app.nginx_static_root|default(app_dir)}};
+    index index.html;
+    gzip_static on;
+    expires max;
+  }
+
+  {% for location in app.nginx_api_locations|default(wsgi_nginx_api_locations) %}
+  location {{ location }} {
     expires off;
-    gzip on;
 
-    {% for option in app.nginx_options|default(wsgi_nginx_options) %}
-        {{option}}
-    {% endfor -%}
-
-    {% for location in app.nginx_static_locations|default(wsgi_nginx_static_locations) %}
-        location {{location}} {
-            access_log off;
-            root {{app.nginx_static_root|default(app_dir)}};
-            expires max;
-        }
-    {% endfor -%}
-
-
-    location / {
-        expires off;
-
-        {{ app.proxy_params|default(wsgi_proxy_params) }}
+    {{ app.proxy_params|default(wsgi_proxy_params) }}
 
     {% if server == 'uwsgi' %}
-        include uwsgi_params;
-        uwsgi_pass wsgi-{{app.name}};
-        uwsgi_read_timeout {{wsgi_uwsgi_read_timeout}};
+    include uwsgi_params;
+    uwsgi_pass wsgi-{{app.name}};
+    uwsgi_read_timeout {{wsgi_uwsgi_read_timeout}};
     {% else %}
-        proxy_pass http://wsgi-{{app.name}};
+    proxy_pass http://wsgi-{{app.name}};
     {% endif %}
-    }
+  }
+  {% endfor -%}
 
 }
 {%- endmacro %}
 
 # Application Upstream
 upstream wsgi-{{app.name}} {
-{% if socket.startswith('/') %}
+  {% if socket.startswith('/') %}
   server unix://{{socket}};
-{% elif socket.startswith(':') %}
+  {% elif socket.startswith(':') %}
   server localhost{{socket}};
-{% else %}
+  {% else %}
   server {{socket}};
-{% endif -%}
+  {% endif -%}
 }
 
 {% if wsgi_nginx_redirect_www -%}
@@ -81,9 +82,9 @@ upstream wsgi-{{app.name}} {
 {% for sn in servernames.split(' ') %}
 {% if sn.split('.')|length == 2 -%}
 server {
-    listen     {{port}};
-    server_name www.{{sn}};
-    rewrite ^(.*) $scheme://{{sn}}$1 permanent;
+  listen     {{port}};
+  server_name www.{{sn}};
+  rewrite ^(.*) $scheme://{{sn}}$1 permanent;
 }
 {% endif %}
 {% endfor %}
@@ -92,9 +93,9 @@ server {
 {% if ssl_redirect -%}
 # Redirect HTTP to SSL
 server {
-    listen {{port}};
-    server_name {{servernames}};
-    rewrite ^(.*) https://$host$1 permanent;
+  listen {{port}};
+  server_name {{servernames}};
+  rewrite ^(.*) https://$host$1 permanent;
 }
 {% else %}
 # Server HTTP
